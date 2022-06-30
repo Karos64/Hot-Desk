@@ -138,7 +138,7 @@ app.MapGet("/locations/{lid}/desks/{id}", ([FromHeader(Name = "login-token")] st
 });
 
 // Filter desks in specific location
-app.MapGet("/locations/{id}/desks/", ([FromHeader(Name = "login-token")] string ? loginToken, int id, HotDeskDB db) =>
+app.MapGet("/locations/{id}/desks", ([FromHeader(Name = "login-token")] string ? loginToken, int id, HotDeskDB db) =>
 {
     // find location with id
     Location? loc;
