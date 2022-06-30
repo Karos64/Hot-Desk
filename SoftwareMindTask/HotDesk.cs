@@ -1,7 +1,10 @@
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<HotDeskDB>(opt => opt.UseInMemoryDatabase("HotDeskDB"));
+
+string adminToken = "1234567890";
 
 var app = builder.Build();
 
@@ -10,24 +13,33 @@ app.UseDeveloperExceptionPage();
 app.MapGet("/", () => "API made by Seweryn Jarco");
 
 // Administration: get all locations, Desks[] doesnt work here
-app.MapGet("/admin/locations", async (HotDeskDB db) =>
-    Results.Ok(await db.Locations.ToListAsync()));
+app.MapGet("/admin/locations", async ([FromHeader(Name = "login-token")] string? loginToken, HotDeskDB db) =>
+{
+    if(!adminToken.Equals(loginToken)) return Results.Unauthorized();
+    return Results.Ok(await db.Locations.ToListAsync());
+});
 
 // Administration: get all desks, Reservations[] doesnt work here
-app.MapGet("/admin/desks", async (HotDeskDB db) =>
-    Results.Ok(await db.Desks.ToListAsync()));
+app.MapGet("/admin/desks", async ([FromHeader(Name = "login-token")] string? loginToken, HotDeskDB db) =>
+{
+    if (!adminToken.Equals(loginToken)) return Results.Unauthorized();
+    return Results.Ok(await db.Desks.ToListAsync());
+});
 
 // Administration: add location
-app.MapPost("/admin/locations", async(Location location, HotDeskDB db) =>
+app.MapPost("/admin/locations", async([FromHeader(Name = "login-token")] string ? loginToken, Location location, HotDeskDB db) =>
 {
+    if (!adminToken.Equals(loginToken)) return Results.Unauthorized();
     db.Locations.Add(location);
     await db.SaveChangesAsync();
     return Results.Created($"/locations/{location.Id}", location);
 });
 
 // Administration: remove location
-app.MapDelete("/admin/locations/{id}", async(int id, HotDeskDB db) =>
+app.MapDelete("/admin/locations/{id}", async([FromHeader(Name = "login-token")] string ? loginToken, int id, HotDeskDB db) =>
 {
+    if (!adminToken.Equals(loginToken)) return Results.Unauthorized();
+
     var loc = db.Locations.Where(x => x.Id == id).Include(x => x.Desks).FirstOrDefault();
     if (loc == null) return Results.NotFound();
 
@@ -40,8 +52,10 @@ app.MapDelete("/admin/locations/{id}", async(int id, HotDeskDB db) =>
 });
 
 // Administration: add desk
-app.MapPost("/admin/locations/{id}/desks", async (int id, Desk desk, HotDeskDB db) =>
+app.MapPost("/admin/locations/{id}/desks", async ([FromHeader(Name = "login-token")] string ? loginToken, int id, Desk desk, HotDeskDB db) =>
 {
+    if (!adminToken.Equals(loginToken)) return Results.Unauthorized();
+
     var loc = db.Locations.Where(x => x.Id == id).Include(x => x.Desks).FirstOrDefault();
     if (loc == null) return Results.NotFound();
 
@@ -51,18 +65,24 @@ app.MapPost("/admin/locations/{id}/desks", async (int id, Desk desk, HotDeskDB d
 });
 
 // Administration: remove desk
-app.MapDelete("/admin/locations/{lid}/desks/{id}", async (int lid, int id, HotDeskDB db) =>
+app.MapDelete("/admin/locations/{lid}/desks/{id}", async ([FromHeader(Name = "login-token")] string ? loginToken, int lid, int id, HotDeskDB db) =>
 {
+    if (!adminToken.Equals(loginToken)) return Results.Unauthorized();
+
     // find location with id
-    var loc = db.Locations.Where(x => x.Id == lid).Include(x => x.Desks).FirstOrDefault();
+    var loc = db.Locations.Where(x => x.Id == lid).Include(x => x.Desks).ThenInclude(y => y.Reservations).FirstOrDefault();
     if (loc == null) return Results.NotFound();
 
     // find desk with id
     var desk = loc.Desks.Where(d => d.Id == id).FirstOrDefault();
     if (desk == null) return Results.NotFound();
 
-    // check if there are no reservations at this desk
-    if (desk.Reservations.Count > 0) return Results.Conflict();
+    // check if there are no pending reservations at this desk
+    DateTime now = DateTime.Now;
+    foreach (Reservation R in desk.Reservations)
+    {
+        if (R.EndDate > now) return Results.Conflict();
+    }
 
     db.Desks.Remove(desk);
     loc.Desks.Remove(desk);
@@ -71,8 +91,10 @@ app.MapDelete("/admin/locations/{lid}/desks/{id}", async (int lid, int id, HotDe
 });
 
 // Administration: change desk availability
-app.MapPut("/admin/locations/{lid}/desks/{id}", async (int lid, int id, Desk inputDesk, HotDeskDB db) =>
+app.MapPut("/admin/locations/{lid}/desks/{id}", async ([FromHeader(Name = "login-token")] string ? loginToken, int lid, int id, Desk inputDesk, HotDeskDB db) =>
 {
+    if (!adminToken.Equals(loginToken)) return Results.Unauthorized();
+
     // find location with id
     var loc = db.Locations.Where(x => x.Id == lid).Include(x => x.Desks).FirstOrDefault();
     if (loc == null) return Results.NotFound();
@@ -87,16 +109,25 @@ app.MapPut("/admin/locations/{lid}/desks/{id}", async (int lid, int id, Desk inp
 });
 
 // Get info about specific location
-app.MapGet("/locations/{id}", (int id, HotDeskDB db) => {
-    var loc = db.Locations.Where(x => x.Id == id).Include(x => x.Desks).ThenInclude(y => y.Reservations).FirstOrDefault();
+app.MapGet("/locations/{id}", ([FromHeader(Name = "login-token")] string? loginToken, int id, HotDeskDB db) => {
+    Location? loc;
+    if (adminToken.Equals(loginToken)) 
+        loc = db.Locations.Where(x => x.Id == id).Include(x => x.Desks).ThenInclude(y => y.Reservations).FirstOrDefault();
+    else
+        loc = db.Locations.Where(x => x.Id == id).Include(x => x.Desks).FirstOrDefault();
     return loc != null ? Results.Ok(loc) : Results.NotFound();
 });
 
 // Get info about specific desk
-app.MapGet("/locations/{lid}/desks/{id}", (int lid, int id, HotDeskDB db) =>
+app.MapGet("/locations/{lid}/desks/{id}", ([FromHeader(Name = "login-token")] string? loginToken, int lid, int id, HotDeskDB db) =>
 {
+    Location? loc;
     // find location with id
-    var loc = db.Locations.Where(x => x.Id == lid).Include(x => x.Desks).ThenInclude(y => y.Reservations).FirstOrDefault();
+    if (adminToken.Equals(loginToken))
+        loc = db.Locations.Where(x => x.Id == id).Include(x => x.Desks).ThenInclude(y => y.Reservations).FirstOrDefault();
+    else
+        loc = db.Locations.Where(x => x.Id == id).Include(x => x.Desks).FirstOrDefault();
+
     if (loc == null) return Results.NotFound();
 
     // find desk with id
@@ -107,10 +138,16 @@ app.MapGet("/locations/{lid}/desks/{id}", (int lid, int id, HotDeskDB db) =>
 });
 
 // Filter desks in specific location
-app.MapGet("/locations/{id}/desks/", (int id, HotDeskDB db) =>
+app.MapGet("/locations/{id}/desks/", ([FromHeader(Name = "login-token")] string ? loginToken, int id, HotDeskDB db) =>
 {
     // find location with id
-    var loc = db.Locations.Where(x => x.Id == id).Include(x => x.Desks).FirstOrDefault();
+    Location? loc;
+    // find location with id
+    if (adminToken.Equals(loginToken))
+        loc = db.Locations.Where(x => x.Id == id).Include(x => x.Desks).ThenInclude(y => y.Reservations).FirstOrDefault();
+    else
+        loc = db.Locations.Where(x => x.Id == id).Include(x => x.Desks).FirstOrDefault();
+
     if (loc == null) return Results.NotFound();
 
     return Results.Ok(loc.Desks.ToList());

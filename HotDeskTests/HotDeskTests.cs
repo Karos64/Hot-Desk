@@ -81,6 +81,7 @@ namespace HotDeskTests
             client.DefaultRequestHeaders.Accept.Clear();
             client.DefaultRequestHeaders.Accept.Add(
                 new MediaTypeWithQualityHeaderValue("application/json"));
+            client.DefaultRequestHeaders.Add("login-token", "1234567890");
             return client;
         }
 
