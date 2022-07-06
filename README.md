@@ -1,6 +1,7 @@
-# SoftwareMindTask - Hot Desk API by Seweryn Jarco
+# Hot Desk minimal API by Seweryn Jarco
 
 Hot desk booking system is a system which should designed to automate the reservation of desk in offices through an easy online booking system.
+It is completely written in C# .NET with use of minimal API.
 
 ## Requirements
 
@@ -27,23 +28,23 @@ To authorize request include "login-token" with value "1234567890" in header of 
 
 ### Endpoints that require authorization
 
-* Get all locations : `GET /admin/locations`
-* Get all desks : `GET /admin/desks`
-* Add new location : `POST /admin/locations`
-* Add new desk : `POST /admin/locations/{locid}/desks`
-* Remove location : `DELETE /admin/locations/{locid}`
-* Remove desk : `DELETE /admin/locations/{locid}/desks/{deskid}`
-* Change desk availability : `PUT /admin/locations{locid}/desks/{deskid}`
+* [Get all locations](docs/getlocs.md) : `GET /admin/locations`
+* [Get all desks](docs/getdesks.md) : `GET /admin/desks`
+* [Add new location](docs/newloc.md) : `POST /admin/locations`
+* [Add new desk](docs/newdesk.md) : `POST /admin/locations/{locid}/desks`
+* [Remove location](docs/remloc.md) : `DELETE /admin/locations/{locid}`
+* [Remove desk](docs/remdesk.md) : `DELETE /admin/locations/{locid}/desks/{deskid}`
+* [Change desk availability](docs/changeavail.md) : `PUT /admin/locations{locid}/desks/{deskid}`
 
 ### Endpoints that doesn't require authorization
 
-* Get data about specific location : `GET /locations/{locid}`
-* Get data about specific desk : `GET /locations/{locid}/desks/{deskid}`
-* Filter desk in specific location : `GET /locations/{locid}/desks`
-* Check if desk is available : `GET /locations/{locid}/desks/available/{deskid}`
-* Get available desk at location : `GET /locations/{locid}/desks/available`
-* Make an reservation : `POST /locations/{locid}/desks/{deskid}/book`
-* Change a desk : `POST /locations/{locid}/reservation/{resid}`
+* [Get data about specific location](docs/getloc.md) : `GET /locations/{locid}`
+* [Get data about specific desk](docs/getdesk.md) : `GET /locations/{locid}/desks/{deskid}`
+* [Filter desk in specific location](docs/filterdesk.md) : `GET /locations/{locid}/desks`
+* [Check if desk is available](docs/checkdesk.md) : `GET /locations/{locid}/desks/available/{deskid}`
+* [Get available desk at location](docs/getavail.md) : `GET /locations/{locid}/desks/available`
+* [Make an reservation](docs/book.md) : `POST /locations/{locid}/desks/{deskid}/book`
+* [Change a desk](docs/changedesk.md) : `POST /locations/{locid}/reservation/{resid}`
 
 ## Implementation
 

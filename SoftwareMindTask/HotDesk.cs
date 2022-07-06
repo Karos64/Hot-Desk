@@ -124,9 +124,9 @@ app.MapGet("/locations/{lid}/desks/{id}", ([FromHeader(Name = "login-token")] st
     Location? loc;
     // find location with id
     if (adminToken.Equals(loginToken))
-        loc = db.Locations.Where(x => x.Id == id).Include(x => x.Desks).ThenInclude(y => y.Reservations).FirstOrDefault();
+        loc = db.Locations.Where(x => x.Id == lid).Include(x => x.Desks).ThenInclude(y => y.Reservations).FirstOrDefault();
     else
-        loc = db.Locations.Where(x => x.Id == id).Include(x => x.Desks).FirstOrDefault();
+        loc = db.Locations.Where(x => x.Id == lid).Include(x => x.Desks).FirstOrDefault();
 
     if (loc == null) return Results.NotFound();
 
